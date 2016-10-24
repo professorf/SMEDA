@@ -11,6 +11,8 @@ Operational Instructions: http://www.professorf.com/SMEDA
 For those that do not want to import the source code into Excel, I have included:
 
 1-an Excel spreadsheet with SMEDA.bas already imported: SMEDA_V1_0.xlsm
+
 2-A copy of the free-version of NodeXL:NodeXLGraph11.xlsx
+
 
 NOTE: YOU MUST STILL OBTAIN A CONSUMER KEY AND CONSUMER SECRET FROM APPS.TWITTER.COM TO RUN SMEDA.  See operational instructions above.
