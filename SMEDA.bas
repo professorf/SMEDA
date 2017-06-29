@@ -24,6 +24,7 @@ Attribute VB_Name = "Module11"
 '          20Jun2017 04:50PM - Added a function to check friendship, changed output of getAll for verified, geoenabled, hashtags
 '          28Jun2017 05:07PM - Added a prototype getAllExtended
 '          28Jun2017 10:19PM - Fixed bug in getAllExtended
+'          29Jun2017 07:31AM - Fixed bug in getAllExtended, getRTs now displays URL of RT for easy access (paste in browser)
 Option Explicit
 ' IMPORTANT: YOU MUST OBTAIN CONSUMER KEY AND SECRET FROM TWITTER DEVELOPER ACCOUNT
 Public Const consumer_key As String = ""
@@ -508,7 +509,6 @@ Do
     ' Range("a2") = response ' debug to check resposnes
     sc.Language = "javascript"
     Set json = sc.Eval("(" + response + ")")
-    Range("a2") = response
     '
     ' Loop through every tweet in the json
     '
@@ -890,7 +890,7 @@ End Sub
 ' countRTs: Counts positive and negative words in a tweet
 '
 ' Entry: P column — non-filtered tweets selected in entirety
-' Exit: End of QR columns will contain User, #RTs; a skipped line; Actualy Tweet, #RTs
+' Exit: End of RSTU columns will contain User, #RTs; a skipped line; Actualy Tweet, #RTs, who RTd, times, link to tweet
 '
 Sub countRTs()
 Dim s As Range
@@ -898,12 +898,13 @@ Dim de As New Dictionary ' dictionary of entire tweet
 Dim dj As New Dictionary ' dictionary of just tweeter
 Dim dn As New Dictionary ' dictionary of names who RT'd
 Dim dt As New Dictionary ' dictionary of times for who RT'd
+Dim di As New Dictionary ' dictionary of ids for a RT
 Dim regex As New RegExp
 Dim mc As MatchCollection
 Dim m As Object
 ' may change
-Dim et, jt, nr, rt As String ' et:entire tweet, jt:just tweeter, nr:name of retweeter, rt: retweet time
-Dim doff As Long
+Dim et, jt, nr, rt, ti As String ' et:entire tweet, jt:just tweeter, nr:name of retweeter, rt: retweet time
+Dim doff, coff As Long
 Dim c, k As Variant
 Dim row As Integer
 
@@ -919,6 +920,7 @@ For Each c In s ' go through range
     For Each m In mc
         nr = CStr(c.Cells(1, -11)) ' name of retweeter
         rt = CStr(c.Cells(1, -12)) ' retweet time
+        ti = CStr(c.Cells(1, -13)) ' a retweet id (that links to original id)
         et = m.Value ' entire tweet
         jt = m.SubMatches(0) ' just the tweeter
         If de.Exists(et) Then
@@ -941,6 +943,7 @@ For Each c In s ' go through range
         Else
             dt(et) = rt
         End If
+        di(et) = ti ' ultimately stores the id of the first RT, which brings up orig tweet in Twitter
     Next
 
     Application.StatusBar = "Processing: " + CStr(row) + "/" + CStr(s.count)
@@ -949,9 +952,10 @@ For Each c In s ' go through range
 Next
 ' now output the tweeter RT counts
 row = 1
+coff = 2 ' we have to skip 2 because social network is to left
 For Each k In dj.Keys
-    s.Cells(doff, 2) = k
-    s.Cells(doff, 3) = dj(k)
+    s.Cells(doff, coff) = k
+    s.Cells(doff, coff + 1) = dj(k)
     doff = doff + 1
     Application.StatusBar = "Phase 1/2: RT Usernames: " + CStr(row) + "/" + CStr(dj.count)
     row = row + 1
@@ -962,10 +966,11 @@ Next
 doff = doff + 1 ' skip another row
 row = 1
 For Each k In de.Keys
-    s.Cells(doff, 2) = k
-    s.Cells(doff, 3) = de(k)
-    s.Cells(doff, 4) = dn(k)
-    s.Cells(doff, 5) = dt(k)
+    s.Cells(doff, coff) = k
+    s.Cells(doff, coff + 1) = de(k)
+    s.Cells(doff, coff + 2) = dn(k)
+    s.Cells(doff, coff + 3) = dt(k) ' may want to comment this out
+    s.Cells(doff, coff + 4) = "https://www.twitter.com/statuses/" + di(k)
     
     doff = doff + 1
     Application.StatusBar = "Phase 2/2: RT Entire:" + CStr(row) + "/" + CStr(de.count)
