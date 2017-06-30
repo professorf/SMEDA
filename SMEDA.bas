@@ -24,7 +24,8 @@ Attribute VB_Name = "Module11"
 '          20Jun2017 04:50PM - Added a function to check friendship, changed output of getAll for verified, geoenabled, hashtags
 '          28Jun2017 05:07PM - Added a prototype getAllExtended
 '          28Jun2017 10:19PM - Fixed bug in getAllExtended
-'          29Jun2017 07:31AM - Fixed bug in getAllExtended, getRTs now displays URL of RT for easy access (paste in browser)
+'          29Jun2017 07:31AM - Fixed bug in getAllExtended, getRTs now displays URL of RT for easy access 
+'          29Jun2017 10:10PM - Fixed bug in countRT
 Option Explicit
 ' IMPORTANT: YOU MUST OBTAIN CONSUMER KEY AND SECRET FROM TWITTER DEVELOPER ACCOUNT
 Public Const consumer_key As String = ""
@@ -943,7 +944,11 @@ For Each c In s ' go through range
         Else
             dt(et) = rt
         End If
-        di(et) = ti ' ultimately stores the id of the first RT, which brings up orig tweet in Twitter
+        If di.Exists(et) Then
+            di(et) = ti ' ultimately stores the last id of the first RT, which brings up orig tweet in Twitter
+        Else
+            di(et) = ti ' ultimately stores the last id of the first RT, which brings up orig tweet in Twitter
+        End If
     Next
 
     Application.StatusBar = "Processing: " + CStr(row) + "/" + CStr(s.count)
