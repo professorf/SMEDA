@@ -24,8 +24,9 @@ Attribute VB_Name = "Module11"
 '          20Jun2017 04:50PM - Added a function to check friendship, changed output of getAll for verified, geoenabled, hashtags
 '          28Jun2017 05:07PM - Added a prototype getAllExtended
 '          28Jun2017 10:19PM - Fixed bug in getAllExtended
-'          29Jun2017 07:31AM - Fixed bug in getAllExtended, getRTs now displays URL of RT for easy access 
+'          29Jun2017 07:31AM - Fixed bug in getAllExtended, getRTs now displays URL of RT for easy access (paste in browser)
 '          29Jun2017 10:10PM - Fixed bug in countRT
+'          30Jun2017 08:17AM - Fixed bug in genSocialEdges by creating getRTNameRegex
 Option Explicit
 ' IMPORTANT: YOU MUST OBTAIN CONSUMER KEY AND SECRET FROM TWITTER DEVELOPER ACCOUNT
 Public Const consumer_key As String = ""
@@ -106,6 +107,21 @@ If (rts = "RT ") Then
 Else
     getRTName = ""
 End If
+End Function
+Private Function getRTNameRegEx(t As String) 'regex version of above, which has a bug
+Dim regex As New RegExp
+Dim mc As MatchCollection
+Dim m As Match
+Dim n As String
+
+regex.Pattern = "^RT @([^\s:]+)[\s:].*"
+Set mc = regex.Execute(t)
+n = ""
+If mc.count > 0 Then
+    Set m = mc(0)
+    n = m.SubMatches(0)
+End If
+getRTNameRegEx = n
 End Function
 '
 ' getAll: Get All Tweets (as fast as possible)
@@ -1319,7 +1335,7 @@ Dim d As New Dictionary
     dst = dst + 1 ' skip a blank line for type 2 edges
     row = 1
     For Each c In r
-        mname = getRTName(c.Cells(1, 13))
+        mname = getRTNameRegEx(c.Cells(1, 13))
         If (mname <> "") Then
             node1 = mname
             node2 = c
