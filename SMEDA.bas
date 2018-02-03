@@ -28,6 +28,7 @@ Attribute VB_Name = "Module11"
 '          29Jun2017 10:10PM - Fixed bug in countRT
 '          30Jun2017 08:17AM - Fixed bug in genSocialEdges by creating getRTNameRegex
 '          18Jul2017 05:27PM - Fixed GetAllExtendedSlowly (now works)
+'          03Feb2018 01:57PM - Fixed crash when a user has all numbers as a name
 '
 Option Explicit
 ' IMPORTANT: YOU MUST OBTAIN CONSUMER KEY AND SECRET FROM TWITTER DEVELOPER ACCOUNT
@@ -1461,7 +1462,7 @@ Dim d As New Dictionary
         For Each mname In ma
             node1 = c.Value
             node2 = mname
-            edge = node1 + "-" + node2
+            edge = CStr(node1) + "-" + CStr(node2)
             If d.Exists(edge) Then
                 d(edge) = d(edge) + 1
             Else
@@ -1502,7 +1503,7 @@ Dim d As New Dictionary
         If (mname <> "") Then
             node1 = mname
             node2 = c
-            edge = node1 + "-" + node2
+            edge = CStr(node1) + "-" + CStr(node2)
             If (d.Exists(edge)) Then
                 d(edge) = d(edge) + 1
             Else
