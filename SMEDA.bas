@@ -29,6 +29,7 @@ Attribute VB_Name = "Module11"
 '          30Jun2017 08:17AM - Fixed bug in genSocialEdges by creating getRTNameRegex
 '          18Jul2017 05:27PM - Fixed GetAllExtendedSlowly (now works)
 '          03Feb2018 01:57PM - Fixed crash when a user has all numbers as a name
+'          17Feb2018 06:47PM - Created removeStopwords function
 '
 Option Explicit
 ' IMPORTANT: YOU MUST OBTAIN CONSUMER KEY AND SECRET FROM TWITTER DEVELOPER ACCOUNT
@@ -36,8 +37,9 @@ Public Const consumer_key As String = ""
 Public Const consumer_secret As String = ""
 Public bearer_token As String
 Public Const HINTERVAL As Long = 60 ' Bin size for histograms in minutes
-Dim dpwords As New Dictionary
-Dim dnwords As New Dictionary
+Dim dpwords As New Dictionary ' positive sentiment words
+Dim dnwords As New Dictionary ' negative sentiment words
+Dim dswords As New Dictionary ' stop words
 
 '
 ' TwitterLogin: Logs you into twitter
@@ -1559,6 +1561,65 @@ Dim pos, neg, dif, row As Long
     Next
     MsgBox "genSentiment Done"
 End Sub
+'
+' removeStopWords: Remove stop words
+'
+' Entry: P column — original tweets selected in their entirety
+' Exit: End of P column contains cell with stopwords removed
+'
+Sub removeStopWords()
+Dim r As Range
+Dim c, stopword As Variant
+Dim i, pos, neg, dif, row, scount As Long
+Dim sw As Variant
+Dim sr As Range
+Dim doff As Long
+Dim stopped, sword, rgx As String
+Dim mc As MatchCollection
+
+    Set r = Selection
+    doff = r.count + 2 ' put results underneath selection
+    
+    ' first read all the stopwords into a dictionary
+    If (dswords.count = 0) Then
+        dswords.RemoveAll
+        Set sw = Worksheets("SWords") ' Stop Words
+        Set sr = sw.Range("A:A")
+        scount = sr.End(xlDown).row
+        
+        For i = 1 To scount
+            dswords(LCase(sr.Cells(i, 1))) = 0
+        Next
+    End If
+    
+   
+    row = 1
+    For Each c In r
+        stopped = LCase(c)
+        rgx = "[A-Za-z'-]+"
+        Set mc = regexMatch(CStr(stopped), rgx)
+        For Each stopword In mc
+            sword = LCase(stopword)
+            If (dswords.Exists(sword)) Then
+                rgx = "(^" + sword + " | " + sword + " | " + sword + "$)"
+                stopped = regexReplace(CStr(stopped), rgx, " ")
+            End If
+        Next
+               
+        'For Each stopword In dswords.Keys ' LONG WAY
+        '    sword = CStr(stopword)
+        '    rgx = "(^" + sword + " | " + sword + " | " + sword + "$)"
+        '    stopped = regexReplace(CStr(stopped), rgx, " ")
+        'Next
+        r.Cells(doff, 1) = stopped
+        
+        Application.StatusBar = "Processing Tweet #" + CStr(row) + "/" + CStr(r.count)
+        doff = doff + 1
+        row = row + 1
+        DoEvents
+    Next
+    MsgBox "removeStopwords Done"
+End Sub
 Private Sub createSentimentDB()
 Dim pw, nw As Variant
 Dim pr, nr As Range
@@ -1781,4 +1842,16 @@ regex.Pattern = p
 
 ns = regex.Replace(s, r)
 regexReplace = ns
+End Function
+
+Function regexMatch(s As String, p As String) As MatchCollection
+Dim regex As New RegExp
+Dim m As MatchCollection
+
+regex.Global = True
+regex.IgnoreCase = True
+regex.Pattern = p
+
+Set m = regex.Execute(s)
+Set regexMatch = m
 End Function
