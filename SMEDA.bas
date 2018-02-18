@@ -29,7 +29,8 @@ Attribute VB_Name = "Module11"
 '          30Jun2017 08:17AM - Fixed bug in genSocialEdges by creating getRTNameRegex
 '          18Jul2017 05:27PM - Fixed GetAllExtendedSlowly (now works)
 '          03Feb2018 01:57PM - Fixed crash when a user has all numbers as a name
-'          17Feb2018 06:47PM - Created removeStopwords function
+'          17Feb2018 06:47PM - Created removeStopwords subroutine & regexMatch function
+'          17Feb2018 09:06PM - Created a DocumentTermMatrix subroutine
 '
 Option Explicit
 ' IMPORTANT: YOU MUST OBTAIN CONSUMER KEY AND SECRET FROM TWITTER DEVELOPER ACCOUNT
@@ -1048,7 +1049,7 @@ Dim s As String
 Dim x As Variant
 
 Set r = Selection
-nrows = r.Cells.rows.count
+nrows = r.Cells.Rows.count
 
 For Each x In r
     s = CStr(x)
@@ -1619,6 +1620,63 @@ Dim mc As MatchCollection
         DoEvents
     Next
     MsgBox "removeStopwords Done"
+End Sub
+'
+' createDocumentTermMatrix: Creates a document term matrix
+'
+' Entry: A highlighted column of statement
+' Exit: new worksheet as a DocumentTermMatrix
+'
+Sub createDocumentTermMatrix()
+Dim s As Range
+Dim c, word, key As Variant
+Dim a As Worksheet
+Dim d As New Dictionary
+Dim mc As MatchCollection
+Dim rgx As String
+Dim row, col, count As Long
+
+'
+' Grab all the words
+'
+Set s = Selection
+For Each c In s
+    rgx = "[^ ]+"
+    Set mc = regexMatch(CStr(c), CStr(rgx))
+    For Each word In mc
+        If d.Exists(LCase(word)) = False Then
+            d(LCase(word)) = 0
+        End If
+    Next
+Next
+'
+' Create a new worksheet
+'
+ActiveWorkbook.Sheets.Add After:=Worksheets(Worksheets.count)
+Set a = ActiveSheet
+'
+' Write the terms as columns
+'
+col = 2
+For Each key In d.Keys
+    a.Cells(1, col) = CStr(key)
+    col = col + 1
+Next
+row = 2
+For Each c In s
+    col = 1
+    a.Cells(row, col) = row - 1
+    col = col + 1
+    For Each key In d.Keys
+        count = regexCounter(CStr(c), "(^" + key + " | " + key + " | " + key + "$)")
+        a.Cells(row, col) = count
+        col = col + 1
+    Next
+    row = row + 1
+Next
+
+'a.Cells(1, 1) = "Hello World"
+' a.Cells(2, 1) = "Yabadabba Doo"
 End Sub
 Private Sub createSentimentDB()
 Dim pw, nw As Variant
