@@ -98,7 +98,7 @@ CreateObjectx86 , True ' close mshta host window at the end
 MsgBox ("Bearer Token: " + bearer_token)
 End Sub
 Private Function getRTName(t As String)
-Dim colonloc, endloc As Integer
+Dim colonloc, endloc As Long
 Dim rts
 
 rts = Mid(t, 1, 3)
@@ -151,17 +151,17 @@ Dim last_id As String
 Dim max_id As String
 Dim x As Object
 Dim text As String ' hack to prevent vba from capitalizing text to Text
-Dim id As Integer
-Dim count As Integer
-Dim iname As Integer
+Dim id As Long
+Dim count As Long
+Dim iname As Long
 Dim r As String
-Dim c As Integer
+Dim c As Long
 Dim json As Object
 Dim location 'hack to prevent vba from capitalizing location as Location
-Dim zed As Integer
+Dim zed As Long
 Dim mentions, hashtags, medias As String
 Dim en, um, uh, uu As Variant
-Dim scount As Integer
+Dim scount As Long
 Dim stime As String
 '
 ' Login if necesary
@@ -305,15 +305,15 @@ Dim dnum As Long
 Dim dcell As String
 Dim x As Object
 Dim text As String ' hack to prevent vba from capitalizing text to Text
-Dim id As Integer
-Dim count As Integer
-Dim iname As Integer
+Dim id As Long
+Dim count As Long
+Dim iname As Long
 Dim r As String
-Dim c As Integer
+Dim c As Long
 Dim max_id As String
 Dim last_id As String
 Dim json As Object
-Dim scount As Integer
+Dim scount As Long
 Dim stime As String
 Dim mentions, hashtags, medias As String
 Dim um, uh, uu As Variant
@@ -462,17 +462,17 @@ Dim last_id As String
 Dim max_id As String
 Dim x As Object
 Dim text As String ' hack to prevent vba from capitalizing text to Text
-Dim id As Integer
-Dim count As Integer
-Dim iname As Integer
+Dim id As Long
+Dim count As Long
+Dim iname As Long
 Dim r As String
-Dim c As Integer
+Dim c As Long
 Dim json As Object
 Dim location 'hack to prevent vba from capitalizing location as Location
-Dim zed As Integer
+Dim zed As Long
 Dim mentions, hashtags, medias As String
 Dim en, um, uh, uu As Variant
-Dim scount As Integer
+Dim scount As Long
 Dim stime As String
 '
 ' Login if necesary
@@ -623,17 +623,17 @@ Dim last_id As String
 Dim max_id As String
 Dim x As Object
 Dim text As String ' hack to prevent vba from capitalizing text to Text
-Dim id As Integer
-Dim count As Integer
-Dim iname As Integer
+Dim id As Long
+Dim count As Long
+Dim iname As Long
 Dim r As String
-Dim c As Integer
+Dim c As Long
 Dim json As Object
 Dim location 'hack to prevent vba from capitalizing location as Location
-Dim zed As Integer
+Dim zed As Long
 Dim mentions, hashtags, medias As String
 Dim en, um, uh, uu As Variant
-Dim scount As Integer
+Dim scount As Long
 Dim stime As String
 '
 ' Login if necesary
@@ -860,7 +860,7 @@ Dim parameters As String
 Dim dcell As String
 Dim x As Object
 Dim text As String ' hack to prevent vba from capitalizing text to Text
-Dim id As Integer
+Dim id As Long
 Dim name, description, status
 
 
@@ -910,7 +910,7 @@ Dim parameters As String
 Dim dcell As String
 Dim x As Object
 Dim text As String ' hack to prevent vba from capitalizing text to Text
-Dim id As Integer
+Dim id As Long
 Dim name, description, status
 
 
@@ -942,7 +942,7 @@ End Sub
 '
 ' sleepNow: sleeps for the specified number of seconds
 '
-Sub sleepNow(s As Integer)
+Sub sleepNow(s As Long)
 Dim wakeup As Date
 
 wakeup = DateAdd("s", s, Now)
@@ -954,7 +954,7 @@ End Sub
 ' fixDate: Puts an Excel Date into a VBA date for calculation purposes
 '
 Function fixDate(ByVal d As String) As String
-Dim dlen, x As Integer
+Dim dlen, x As Long
 Dim dyear, ddate As String
 ' sample d=Sat Mar 14 00:00:01 +0000 2015
 dyear = Mid(d, 27, 4) ' 2015
@@ -1090,7 +1090,7 @@ Dim m As Object
 Dim et, jt, nr, rt, ti As String ' et:entire tweet, jt:just tweeter, nr:name of retweeter, rt: retweet time
 Dim doff, coff As Long
 Dim c, k As Variant
-Dim row As Integer
+Dim row As Long
 
 ' regex.Global = True
 regex.IgnoreCase = True
@@ -1320,7 +1320,7 @@ End Function
 Sub filterTweets()
 Dim s As Range
 Dim c As Variant
-Dim row As Integer
+Dim row As Long
 
     Set s = Selection
     row = 1
@@ -1345,7 +1345,7 @@ Dim d As New Dictionary
 Dim doff As Long
 Dim words, word As Variant
 Dim c, k As Variant
-Dim row As Integer
+Dim row As Long
 
 Set s = Selection
 doff = s.count + 2
