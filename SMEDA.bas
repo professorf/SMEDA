@@ -31,6 +31,7 @@ Attribute VB_Name = "Module11"
 '          03Feb2018 01:57PM - Fixed crash when a user has all numbers as a name
 '          17Feb2018 06:47PM - Created removeStopwords subroutine & regexMatch function
 '          17Feb2018 09:06PM - Created a DocumentTermMatrix subroutine
+'          24Mar2018 11:39AM - Added support for NGrams
 '
 Option Explicit
 ' IMPORTANT: YOU MUST OBTAIN CONSUMER KEY AND SECRET FROM TWITTER DEVELOPER ACCOUNT
@@ -41,6 +42,7 @@ Public Const HINTERVAL As Long = 60 ' Bin size for histograms in minutes
 Dim dpwords As New Dictionary ' positive sentiment words
 Dim dnwords As New Dictionary ' negative sentiment words
 Dim dswords As New Dictionary ' stop words
+Dim dgwords As New Dictionary ' ngrams
 
 '
 ' TwitterLogin: Logs you into twitter
@@ -1677,6 +1679,59 @@ Next
 
 'a.Cells(1, 1) = "Hello World"
 ' a.Cells(2, 1) = "Yabadabba Doo"
+End Sub
+'
+' replaceWithNGrams: replaces word combinations with their NGram equivalent
+'
+' Entry: P column — original tweets selected in their entirety
+'        NGrams Tab — containing ngrams, like "Wake Up America"
+' Exit: End of P column contains data with NGrams added (phrases have dashes, e.g., "Wake-Up-America")
+'
+Sub replaceWithNGrams()
+Dim r As Range
+Dim c, ng As Variant
+Dim i, row, scount As Long
+Dim sw As Variant
+Dim sr As Range
+Dim doff As Long
+Dim tweet, sng, dashsng As String
+Dim mc As MatchCollection
+
+    Set r = Selection
+    doff = r.count + 2 ' put results underneath selection
+    
+    ' first read all the ngrams into a dictionary
+    If (dgwords.count = 0) Then
+        dgwords.RemoveAll
+        Set sw = Worksheets("NGrams") ' NGrams
+        Set sr = sw.Range("A:A")
+        scount = sr.End(xlDown).row
+        
+        For i = 1 To scount
+            dgwords(LCase(sr.Cells(i, 1))) = 0
+        Next
+    End If
+    
+   
+    row = 1
+    For Each c In r
+        tweet = LCase(c)
+        For Each ng In dgwords.Keys
+            sng = LCase(ng)
+            dashsng = Replace(sng, " ", "-")
+            tweet = Replace(tweet, sng, dashsng)
+            'dashsng = regexReplace(CStr(sng), " ", "-")
+            'tweet = regexReplace(CStr(tweet), CStr(sng), CStr(dashsng))
+        Next
+        r.Cells(doff, 1) = tweet
+        
+        Application.StatusBar = "Processing Tweet #" + CStr(row) + "/" + CStr(r.count)
+        doff = doff + 1
+        row = row + 1
+        DoEvents
+    Next
+        
+    MsgBox "replaceWithNGrams Done"
 End Sub
 Private Sub createSentimentDB()
 Dim pw, nw As Variant
