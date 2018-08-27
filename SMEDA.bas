@@ -32,7 +32,7 @@ Attribute VB_Name = "Module11"
 '          17Feb2018 06:47PM - Created removeStopwords subroutine & regexMatch function
 '          17Feb2018 09:06PM - Created a DocumentTermMatrix subroutine
 '          24Mar2018 11:39AM - Added support for NGrams
-'
+'          27Aug2018 05:34PM - Changed starting row to Row 4 so that header could be used
 Option Explicit
 ' IMPORTANT: YOU MUST OBTAIN CONSUMER KEY AND SECRET FROM TWITTER DEVELOPER ACCOUNT
 Public Const consumer_key As String = ""
@@ -139,7 +139,7 @@ End Function
 ' Exit:   Up to 45,000 Tweets scraped per the search string
 '         If more than 45,000 tweets use GetAllSlowly to scrape remaining
 '
-Sub getAll()
+Private Sub getAll() ' 27Aug2018, Changed to Private, Will delete with next revision
 Attribute getAll.VB_ProcData.VB_Invoke_Func = " \n14"
 Dim req As New XMLHTTP60 ' Don't forget Tools > References : Microsoft XML,v6.0
 Dim sc As ScriptControl
@@ -180,7 +180,7 @@ Set sc = CreateObjectx86("MSScriptControl.ScriptControl")
 '
 ' The Starting Cell of the Output
 '
-dnum = 3
+dnum = 4
 dcell = "B"
 
 '
@@ -296,7 +296,7 @@ End Sub
 '         Cursor positioned on last valid B-cell
 ' Exit:   All the tweets, subject to Excel's max row
 '
-Sub getAllSlowly()
+Private Sub getAllSlowly() ' 27Aug2018, changed to Private will delete in next rev
 Dim req As New XMLHTTP60 ' Don't forget Tools > References : Microsoft XML,v6.0
 Dim sc As ScriptControl
 Dim url As String
@@ -335,7 +335,7 @@ Set sc = CreateObjectx86("MSScriptControl.ScriptControl")
 '
 ' The Starting Cell of the Output
 '
-dnum = 3
+dnum = 4
 dcell = "B"
 
 '
@@ -491,7 +491,7 @@ Set sc = CreateObjectx86("MSScriptControl.ScriptControl")
 '
 ' The Starting Cell of the Output
 '
-dnum = 3
+dnum = 4
 dcell = "B"
 
 '
@@ -652,7 +652,7 @@ Set sc = CreateObjectx86("MSScriptControl.ScriptControl")
 '
 ' The Starting Cell of the Output
 '
-dnum = 3
+dnum = 4
 dcell = "B"
 
 '
