@@ -33,6 +33,7 @@ Attribute VB_Name = "Module11"
 '          17Feb2018 09:06PM - Created a DocumentTermMatrix subroutine
 '          24Mar2018 11:39AM - Added support for NGrams
 '          27Aug2018 05:34PM - Changed starting row to Row 4 so that header could be used
+'          08Sep2018 10:00AM - RTs now display all 240 characters
 Option Explicit
 ' IMPORTANT: YOU MUST OBTAIN CONSUMER KEY AND SECRET FROM TWITTER DEVELOPER ACCOUNT
 Public Const consumer_key As String = ""
@@ -476,6 +477,7 @@ Dim mentions, hashtags, medias As String
 Dim en, um, uh, uu As Variant
 Dim scount As Long
 Dim stime As String
+Dim rtname, fulltext As String
 '
 ' Login if necesary
 '
@@ -563,10 +565,22 @@ Do
             
             Range("O" + CStr(dnum)) = x.lang
             
-            If (InStr(x.full_text, "=") <> 1) Then
-                Range("P" + CStr(dnum)) = x.full_text
+            If (isRT(x) = False) Then
+                If (InStr(x.full_text, "=") <> 1) Then
+                    Range("P" + CStr(dnum)) = x.full_text
+                Else
+                    Range("P" + CStr(dnum)) = "!" + x.full_text
+                End If
             Else
-                Range("P" + CStr(dnum)) = "!" + x.full_text
+                fulltext = x.full_text
+                fulltext = regexReplace(fulltext, "\n", " ")
+                rtname = regexReplace(fulltext, "(^RT [^ ]+).*$", "$1")
+                                
+                If (InStr(x.retweeted_status.full_text, "=") <> 1) Then
+                    Range("P" + CStr(dnum)) = rtname + " " + x.retweeted_status.full_text
+                Else
+                    Range("P" + CStr(dnum)) = "! " + rtname + " " + x.retweeted_status.full_text
+                End If
             End If
             
             hashtags = ""
@@ -637,6 +651,7 @@ Dim mentions, hashtags, medias As String
 Dim en, um, uh, uu As Variant
 Dim scount As Long
 Dim stime As String
+Dim rtname, fulltext As String
 '
 ' Login if necesary
 '
@@ -724,10 +739,22 @@ Do
             
             Range("O" + CStr(dnum)) = x.lang
             
-            If (InStr(x.full_text, "=") <> 1) Then
-                Range("P" + CStr(dnum)) = x.full_text
+            If (isRT(x) = False) Then
+                If (InStr(x.full_text, "=") <> 1) Then
+                    Range("P" + CStr(dnum)) = x.full_text
+                Else
+                    Range("P" + CStr(dnum)) = "!" + x.full_text
+                End If
             Else
-                Range("P" + CStr(dnum)) = "!" + x.full_text
+                fulltext = x.full_text
+                fulltext = regexReplace(fulltext, "\n", " ")
+                rtname = regexReplace(fulltext, "(^RT [^ ]+).*$", "$1")
+                                
+                If (InStr(x.retweeted_status.full_text, "=") <> 1) Then
+                    Range("P" + CStr(dnum)) = rtname + " " + x.retweeted_status.full_text
+                Else
+                    Range("P" + CStr(dnum)) = "! " + rtname + " " + x.retweeted_status.full_text
+                End If
             End If
             
             hashtags = ""
@@ -1575,7 +1602,7 @@ Dim r As Range
 Dim c, stopword As Variant
 Dim i, pos, neg, dif, row, scount As Long
 Dim sw As Variant
-Dim sr As Range
+Dim SR As Range
 Dim doff As Long
 Dim stopped, sword, rgx As String
 Dim mc As MatchCollection
@@ -1587,11 +1614,11 @@ Dim mc As MatchCollection
     If (dswords.count = 0) Then
         dswords.RemoveAll
         Set sw = Worksheets("SWords") ' Stop Words
-        Set sr = sw.Range("A:A")
-        scount = sr.End(xlDown).row
+        Set SR = sw.Range("A:A")
+        scount = SR.End(xlDown).row
         
         For i = 1 To scount
-            dswords(LCase(sr.Cells(i, 1))) = 0
+            dswords(LCase(SR.Cells(i, 1))) = 0
         Next
     End If
     
@@ -1692,7 +1719,7 @@ Dim r As Range
 Dim c, ng As Variant
 Dim i, row, scount As Long
 Dim sw As Variant
-Dim sr As Range
+Dim SR As Range
 Dim doff As Long
 Dim tweet, sng, dashsng As String
 Dim mc As MatchCollection
@@ -1704,11 +1731,11 @@ Dim mc As MatchCollection
     If (dgwords.count = 0) Then
         dgwords.RemoveAll
         Set sw = Worksheets("NGrams") ' NGrams
-        Set sr = sw.Range("A:A")
-        scount = sr.End(xlDown).row
+        Set SR = sw.Range("A:A")
+        scount = SR.End(xlDown).row
         
         For i = 1 To scount
-            dgwords(LCase(sr.Cells(i, 1))) = 0
+            dgwords(LCase(SR.Cells(i, 1))) = 0
         Next
     End If
     
@@ -1968,3 +1995,18 @@ regex.Pattern = p
 Set m = regex.Execute(s)
 Set regexMatch = m
 End Function
+
+Public Function isRT(myobj As Object) As Boolean
+Dim retval As Boolean
+Dim x As String
+
+retval = False
+On Error GoTo ErrorHandler
+
+x = myobj.retweeted_status ' if it crashes, it doesn't exist
+retval = True              'if it's here, it exists
+
+ErrorHandler:
+isRT = retval
+End Function
+
