@@ -20,7 +20,10 @@ to scrape Twitter and provides basic exploratory data analytics including:
 
 <img src="SMEDA-Screenshot.png" width=75%>
 
-SMEDA requires that you register a developer account on Twitter and insert your app keys into SMEDA. The ProfessorF website ([Flor, 2018](http://professorf.com/cognitive-analytics/smeda-tutorial/)) contains detailed instructions for registering a Twitter Developer account, as well as setting up and running SMEDA.
+SMEDA requires that you register a developer account on Twitter and insert your app keys into SMEDA. The ProfessorF website ([Flor, 2019a](http://professorf.com/cognitive-analytics/smeda-tutorial/)) contains detailed instructions for registering a Twitter Developer account, as well as setting up and running SMEDA.
+
+The [GitHub.com/Professorf/SMEDA](http://www.github.com/professorf/SMEDA) contains the software repository, and the latest version is ([Flor,2019b](https://github.com/professorf/SMEDA/blob/master/SMEDA-Spring-2019.xlsm))
 
 ## References
-Flor, Nick (2018). _SMEDA Tutorial_. Retrieved January 27, 2018 at: [http://professorf.com/cognitive-analytics/smeda-tutorial/](http://professorf.com/cognitive-analytics/smeda-tutorial/)
+Flor, Nick (2019a). _SMEDA Tutorial_. Retrieved January 27, 2019 at: [http://professorf.com/cognitive-analytics/smeda-tutorial/](http://professorf.com/cognitive-analytics/smeda-tutorial/)  
+Flor, Nick (2019b). _SMEDA Spring 2019 (Latest Version)_. Retrieved January 27, 2019 at [https://github.com/professorf/SMEDA/blob/master/SMEDA-Spring-2019.xlsm](https://github.com/professorf/SMEDA/blob/master/SMEDA-Spring-2019.xlsm)
