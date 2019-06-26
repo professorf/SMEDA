@@ -2,7 +2,7 @@ Attribute VB_Name = "Module11"
 '
 ' ProfessorF's Twitter Scraper
 '
-' Copyright (c) Nick V. Flor, 2014-2016, All rights reserved
+' Copyright (c) Nick V. Flor, 2014-2019, All rights reserved
 '
 ' This work is licensed under the Creative Commons Attribution-ShareAlike 4.0 International License.
 ' CC BY-SA => If you use this code for research, you must cite me in your paper references
@@ -34,6 +34,8 @@ Attribute VB_Name = "Module11"
 '          24Mar2018 11:39AM - Added support for NGrams
 '          27Aug2018 05:34PM - Changed starting row to Row 4 so that header could be used
 '          08Sep2018 10:00AM - RTs now display all 240 characters
+'          26Jun2019 07:26AM - Created Input page, Fixed getAll
+'
 Option Explicit
 ' IMPORTANT: YOU MUST OBTAIN CONSUMER KEY AND SECRET FROM TWITTER DEVELOPER ACCOUNT
 Public Const consumer_key As String = ""
@@ -93,12 +95,54 @@ Set json = sc.Eval("(" + response + ")")
 
 
 bearer_token = json.access_token
-Range("B2") = bearer_token
+Worksheets("Input").Range("B2") = bearer_token
 '
 ' Close Script Control
 '
 CreateObjectx86 , True ' close mshta host window at the end
-MsgBox ("Bearer Token: " + bearer_token)
+' MsgBox ("Bearer Token: " + bearer_token)
+End Sub
+
+'
+' createScrapeSheet
+'
+Private Sub createScrapeSheet()
+Dim scrapesheet As String
+Dim ws As Worksheet
+Dim wb As Workbook
+
+On Error Resume Next
+scrapesheet = Worksheets("Input").Range("ScrapeSheet")
+If (scrapesheet = "") Then scrapesheet = "Scrape"
+Set ws = Worksheets(scrapesheet) ' Try to load the scrapesheet
+If (Err.Number > 0) Then
+    ' MsgBox ("Sheet Not Found: " & scrapesheet & ". Creating…")
+    Set ws = Sheets.Add(After:=Worksheets(Worksheets.count))
+    ws.name = scrapesheet
+    
+    Worksheets(scrapesheet).Range("B:B").Select ' Force column B to be text
+    Selection.NumberFormat = "@"
+    Worksheets(scrapesheet).Range("A1").Select
+    
+    ws.Range("A1") = "Bio"
+    ws.Range("B1") = "TweetID"
+    ws.Range("C1") = "TweetDate"
+    ws.Range("D1") = "UserName"
+    ws.Range("E1") = "DateJoined"
+    ws.Range("F1") = "TotalTweets"
+    ws.Range("G1") = "TotalFavs"
+    ws.Range("H1") = "TotalFollowers"
+    ws.Range("I1") = "TotalFriends"
+    ws.Range("J1") = "TotaListed"
+    ws.Range("K1") = "TweetFavs"
+    ws.Range("L1") = "TweetRTs"
+    ws.Range("M1") = "Verified"
+    ws.Range("N1") = "Geo"
+    ws.Range("O1") = "Language"
+    ws.Range("P1") = "Tweet"
+    ws.Range("Q1") = "Hashtags"
+    ws.Range("R1") = "Mentions"
+End If
 End Sub
 Private Function getRTName(t As String)
 Dim colonloc, endloc As Long
@@ -133,15 +177,18 @@ End If
 getRTNameRegEx = n
 End Function
 '
-' getAll: Get All Tweets (as fast as possible)
+' getAll: Get All Tweets (as fast as possible), extended version
 '
 ' Entry:  Twitter search string in A1
 '         Columns B & M Must be Text
 ' Exit:   Up to 45,000 Tweets scraped per the search string
 '         If more than 45,000 tweets use GetAllSlowly to scrape remaining
 '
-Private Sub getAll() ' 27Aug2018, Changed to Private, Will delete with next revision
-Attribute getAll.VB_ProcData.VB_Invoke_Func = " \n14"
+' Note: If the scraper crashes because of the rate limit, put the cursor on the
+'       last valid TweetID, then run getAll again
+'
+Sub getAll()
+Attribute getAll.VB_ProcData.VB_Invoke_Func = "a\n14"
 Dim req As New XMLHTTP60 ' Don't forget Tools > References : Microsoft XML,v6.0
 Dim sc As ScriptControl
 Dim url As String
@@ -149,318 +196,6 @@ Dim response As String
 Dim authorization_value As String
 Dim parameters As String
 Dim dnum As Long
-Dim dcell As String
-Dim last_id As String
-Dim max_id As String
-Dim x As Object
-Dim text As String ' hack to prevent vba from capitalizing text to Text
-Dim id As Long
-Dim count As Long
-Dim iname As Long
-Dim r As String
-Dim c As Long
-Dim json As Object
-Dim location 'hack to prevent vba from capitalizing location as Location
-Dim zed As Long
-Dim mentions, hashtags, medias As String
-Dim en, um, uh, uu As Variant
-Dim scount As Long
-Dim stime As String
-'
-' Login if necesary
-'
-If Range("b2") = "" Then TwitterLogin
-bearer_token = Range("b2")
-authorization_value = "Bearer " + bearer_token ' assumes getTwitterToken called
-
-'
-' Create Script Control
-'
-Set sc = CreateObjectx86("MSScriptControl.ScriptControl")
-
-'
-' The Starting Cell of the Output
-'
-dnum = 4
-dcell = "B"
-
-'
-' Initialize the tweet max_id and the tweet count to zero
-'
-max_id = "0"
-Range("a3") = 0
-
-'
-' Main Loop
-'
-url = "https://api.twitter.com/1.1/search/tweets.json"
-scount = 0 'status variables for long scrapes
-stime = ""
-Do
-    '
-    ' Set up parameters
-    '
-    last_id = max_id ' remember the very last tweet
-    If (max_id = "0") Then
-        parameters = Range("a1") + "&count=100" ' 100 is the max tweets you can grab
-    Else
-        parameters = Range("a1") + "&count=100&" + "max_id=" + max_id
-    End If
-    '
-    ' Send the search request to twitter
-    '
-    req.Open "GET", url + "?" + parameters, False
-    req.setRequestHeader "Authorization", authorization_value
-    req.send
-    '
-    ' Wait until all the data is sent back
-    '
-    While req.readyState <> 4 ' #4 means all data received
-        DoEvents
-    Wend
-    '
-    ' Get the response object and put it into the json variable
-    '
-    response = req.responseText
-    ' Range("a2") = response ' debug to check resposnes
-    sc.Language = "javascript"
-    Set json = sc.Eval("(" + response + ")")
-'    Range("a2") = response ' debugging
-    '
-    ' Loop through every tweet in the json
-    '
-    For Each x In json.statuses
-        If (max_id <> x.id_str) Then
-            Range("B" + CStr(dnum)) = CStr(x.id_str)
-            Range("C" + CStr(dnum)) = x.created_at
-            Range("D" + CStr(dnum)) = x.user.screen_name
-            Range("E" + CStr(dnum)) = x.user.created_at
-            Range("F" + CStr(dnum)) = x.user.statuses_count
-            Range("G" + CStr(dnum)) = x.user.favourites_count
-            Range("H" + CStr(dnum)) = x.user.followers_count
-            Range("I" + CStr(dnum)) = x.user.friends_count
-            Range("J" + CStr(dnum)) = x.user.listed_count
-            Range("K" + CStr(dnum)) = x.favorite_count
-            Range("L" + CStr(dnum)) = x.retweet_count
-            Range("M" + CStr(dnum)) = x.user.verified
-
-            Range("N" + CStr(dnum)) = x.user.geo_enabled
-            
-            Range("O" + CStr(dnum)) = x.lang
-            
-            If (InStr(x.text, "=") <> 1) Then
-                Range("P" + CStr(dnum)) = x.text
-            Else
-                Range("P" + CStr(dnum)) = "!" + x.text
-            End If
-            
-            hashtags = ""
-            For Each uh In x.entities.hashtags
-                If (hashtags <> "") Then hashtags = hashtags + ","
-                hashtags = hashtags + uh.text
-            Next
-            Range("Q" + CStr(dnum)) = hashtags
-
-            mentions = ""
-            For Each um In x.entities.user_mentions
-                If (mentions <> "") Then mentions = mentions + ","
-                mentions = mentions + um.screen_name
-            Next
-            Range("R" + CStr(dnum)) = mentions
-            
-            dnum = dnum + 1
-            max_id = x.id_str
-            If (stime <> CStr(x.created_at)) Then
-                scount = 0
-                stime = CStr(x.created_at)
-            Else
-                scount = scount + 1
-            End If
-            Application.StatusBar = CStr(dnum) + ":" + CStr(scount) + ":" + CStr(x.created_at)
-        End If
-        Range("A3") = dnum - 3
-        DoEvents
-    Next
-    
-    'sleepNow (2) ' If you don't want to use getAllSlowly, uncomment this, but unreliable
-Loop Until (json.statuses = "" Or max_id = last_id)
-
-CreateObjectx86 , True ' close mshta host window at the end
-MsgBox "Get All Done"
-End Sub
-'
-' getAllSlowly: Get All Tweets, but slowly to get around rate limit
-'               Run this ONLY AFTER AND IF getAll crashes
-'
-' Entry:  Twitter search string in A1
-'         Columns B & M Must be Text
-'         Cursor positioned on last valid B-cell
-' Exit:   All the tweets, subject to Excel's max row
-'
-Private Sub getAllSlowly() ' 27Aug2018, changed to Private will delete in next rev
-Dim req As New XMLHTTP60 ' Don't forget Tools > References : Microsoft XML,v6.0
-Dim sc As ScriptControl
-Dim url As String
-Dim response As String
-Dim authorization_value As String
-Dim parameters As String
-Dim dnum As Long
-Dim dcell As String
-Dim x As Object
-Dim text As String ' hack to prevent vba from capitalizing text to Text
-Dim id As Long
-Dim count As Long
-Dim iname As Long
-Dim r As String
-Dim c As Long
-Dim max_id As String
-Dim last_id As String
-Dim json As Object
-Dim scount As Long
-Dim stime As String
-Dim mentions, hashtags, medias As String
-Dim um, uh, uu As Variant
-
-'
-' Login if necesary
-'
-If Range("b2") = "" Then TwitterLogin
-bearer_token = Range("b2")
-authorization_value = "Bearer " + bearer_token ' assumes getTwitterToken called
-
-'
-' Create Scripting object
-'
-Set sc = CreateObjectx86("MSScriptControl.ScriptControl")
-
-'
-' The Starting Cell of the Output
-'
-dnum = 4
-dcell = "B"
-
-'
-' Initialize the tweet max_id and the tweet count to zero
-'
-max_id = Selection
-dnum = ActiveCell.row + 1
-'
-' Main Loop
-'
-url = "https://api.twitter.com/1.1/search/tweets.json"
-scount = 0 'status variables for long scrapes
-stime = ""
-Do
-    '
-    ' Set up parameters
-    '
-
-    last_id = max_id ' remember the very last tweet
-    If (max_id = "0") Then
-        parameters = Range("a1") + "&count=100" ' 100 is the max tweets you can grab
-    Else
-        parameters = Range("a1") + "&count=100&" + "max_id=" + max_id
-    End If
-    '
-    ' Send the search request to twitter
-    '
-    req.Open "GET", url + "?" + parameters, False
-    req.setRequestHeader "Authorization", authorization_value
-    req.send
-    '
-    ' Wait until all the data is sent back
-    '
-    While req.readyState <> 4 ' #4 means all data received
-        DoEvents
-    Wend
-    '
-    ' Get the response object and put it into the json variable
-    '
-    response = req.responseText
-    sc.Language = "javascript"
-    Set json = sc.Eval("(" + response + ")")
-    '
-    ' Loop through every tweet in the json
-    '
-    For Each x In json.statuses
-        If (max_id <> x.id_str) Then
-            ' Same as GetAll (should be a function--future rev)
-            Range("B" + CStr(dnum)) = CStr(x.id_str)
-            Range("C" + CStr(dnum)) = x.created_at
-            Range("D" + CStr(dnum)) = x.user.screen_name
-            Range("E" + CStr(dnum)) = x.user.created_at
-            Range("F" + CStr(dnum)) = x.user.statuses_count
-            Range("G" + CStr(dnum)) = x.user.favourites_count
-            Range("H" + CStr(dnum)) = x.user.followers_count
-            Range("I" + CStr(dnum)) = x.user.friends_count
-            Range("J" + CStr(dnum)) = x.user.listed_count
-            Range("K" + CStr(dnum)) = x.favorite_count
-            Range("L" + CStr(dnum)) = x.retweet_count
-            Range("M" + CStr(dnum)) = x.user.verified
-            Range("N" + CStr(dnum)) = x.user.geo_enabled
-            
-            Range("O" + CStr(dnum)) = x.lang
-            If (InStr(x.text, "=") <> 1) Then
-                Range("P" + CStr(dnum)) = x.text
-            Else
-                Range("P" + CStr(dnum)) = "!" + x.text
-            End If
-            
-            hashtags = ""
-            For Each uh In x.entities.hashtags
-                If (hashtags <> "") Then hashtags = hashtags + ","
-                hashtags = hashtags + uh.text
-            Next
-            
-            Range("Q" + CStr(dnum)) = hashtags
-
-            mentions = ""
-            For Each um In x.entities.user_mentions
-                If (mentions <> "") Then mentions = mentions + ","
-                mentions = mentions + um.screen_name
-            Next
-            Range("R" + CStr(dnum)) = mentions
-            
-            dnum = dnum + 1
-            max_id = x.id_str
-            If (stime <> CStr(x.created_at)) Then
-                scount = 0
-                stime = CStr(x.created_at)
-            Else
-                scount = scount + 1
-            End If
-            Application.StatusBar = CStr(dnum) + ":" + CStr(scount) + ":" + CStr(x.created_at)
-        End If
-        Range("A3") = dnum - 3
-        DoEvents
-    Next
-    
-    sleepNow (2)
-    
-Loop Until (json.statuses = "" Or max_id = last_id)
-
-CreateObjectx86 , True ' close mshta host window at the end
-
-MsgBox "Get All Done"
-End Sub
-'
-' getAllExtended: Get All Tweets (as fast as possible), extended version
-'
-' Entry:  Twitter search string in A1
-'         Columns B & M Must be Text
-' Exit:   Up to 45,000 Tweets scraped per the search string
-'         If more than 45,000 tweets use GetAllSlowly to scrape remaining
-'
-Sub getAllExtended()
-Attribute getAllExtended.VB_ProcData.VB_Invoke_Func = "e\n14"
-Dim req As New XMLHTTP60 ' Don't forget Tools > References : Microsoft XML,v6.0
-Dim sc As ScriptControl
-Dim url As String
-Dim response As String
-Dim authorization_value As String
-Dim parameters As String
-Dim dnum As Long
-Dim dcell As String
 Dim last_id As String
 Dim max_id As String
 Dim x As Object
@@ -478,12 +213,28 @@ Dim en, um, uh, uu As Variant
 Dim scount As Long
 Dim stime As String
 Dim rtname, fulltext As String
+Dim parmbase As String
+Dim scrapesheet As String
+Dim ws As Worksheet
+Dim delay As Long
 '
 ' Login if necesary
 '
-If Range("b2") = "" Then TwitterLogin
-bearer_token = Range("b2")
+If Worksheets("Input").Range("BearerToken") = "" Then TwitterLogin
+bearer_token = Worksheets("Input").Range("BearerToken")
 authorization_value = "Bearer " + bearer_token ' assumes getTwitterToken called
+
+'
+' Create the Scrape Sheet if Necessary
+'
+createScrapeSheet
+scrapesheet = Worksheets("Input").Range("ScrapeSheet")
+Set ws = Worksheets(scrapesheet)
+
+'
+' Get the delay between API calls (delay after 100 tweets are grabbed)
+'
+delay = Worksheets("Input").Range("Delay")
 
 '
 ' Create Script Control
@@ -491,191 +242,18 @@ authorization_value = "Bearer " + bearer_token ' assumes getTwitterToken called
 Set sc = CreateObjectx86("MSScriptControl.ScriptControl")
 
 '
-' The Starting Cell of the Output
+' Initialize the destination row=2, tweet max_id and the tweet count to zero
 '
-dnum = 4
-dcell = "B"
-
-'
-' Initialize the tweet max_id and the tweet count to zero
-'
-max_id = "0"
-Range("a3") = 0
-
-'
-' Main Loop
-'
-url = "https://api.twitter.com/1.1/search/tweets.json"
-scount = 0 'status variables for long scrapes
-stime = ""
-Do
-    '
-    ' Set up parameters, add tweet_mode=extended
-    '
-    last_id = max_id ' remember the very last tweet
-    If (max_id = "0") Then
-        parameters = Range("a1") + "&tweet_mode=extended" + "&count=100" ' 100 is the max tweets you can grab
-    Else
-        parameters = Range("a1") + "&tweet_mode=extended" + "&count=100&" + "max_id=" + max_id
-    End If
-    '
-    ' Send the search request to twitter
-    '
-    req.Open "GET", url + "?" + parameters, False
-    req.setRequestHeader "Authorization", authorization_value
-    req.send
-    '
-    ' Wait until all the data is sent back
-    '
-    While req.readyState <> 4 ' #4 means all data received
-        DoEvents
-    Wend
-    '
-    ' Get the response object and put it into the json variable
-    '
-    response = req.responseText
-    ' Range("a2") = response ' debug to check resposnes
-    sc.Language = "javascript"
-    Set json = sc.Eval("(" + response + ")")
-    '
-    ' Loop through every tweet in the json
-    '
-    For Each x In json.statuses
-        If (max_id <> x.id_str) Then
-            Range("B" + CStr(dnum)) = CStr(x.id_str)
-            Range("C" + CStr(dnum)) = x.created_at
-            Range("D" + CStr(dnum)) = x.user.screen_name
-            Range("E" + CStr(dnum)) = x.user.created_at
-            Range("F" + CStr(dnum)) = x.user.statuses_count
-            Range("G" + CStr(dnum)) = x.user.favourites_count
-            Range("H" + CStr(dnum)) = x.user.followers_count
-            Range("I" + CStr(dnum)) = x.user.friends_count
-            Range("J" + CStr(dnum)) = x.user.listed_count
-            Range("K" + CStr(dnum)) = x.favorite_count
-            Range("L" + CStr(dnum)) = x.retweet_count
-            Range("M" + CStr(dnum)) = x.user.verified
-
-            Range("N" + CStr(dnum)) = x.user.geo_enabled
-            'medias = ""
-            'For Each uu In x.extended_entities.media
-            '    If (medias <> "") Then medias = medias + ","
-            '    medias = medias + uu.media_url_https
-            'Next
-            'Range("N" + CStr(dnum)) = medias
-            
-            Range("O" + CStr(dnum)) = x.lang
-            
-            If (isRT(x) = False) Then
-                If (InStr(x.full_text, "=") <> 1) Then
-                    Range("P" + CStr(dnum)) = x.full_text
-                Else
-                    Range("P" + CStr(dnum)) = "!" + x.full_text
-                End If
-            Else
-                fulltext = x.full_text
-                fulltext = regexReplace(fulltext, "\n", " ")
-                rtname = regexReplace(fulltext, "(^RT [^ ]+).*$", "$1")
-                                
-                If (InStr(x.retweeted_status.full_text, "=") <> 1) Then
-                    Range("P" + CStr(dnum)) = rtname + " " + x.retweeted_status.full_text
-                Else
-                    Range("P" + CStr(dnum)) = "! " + rtname + " " + x.retweeted_status.full_text
-                End If
-            End If
-            
-            hashtags = ""
-            For Each uh In x.entities.hashtags
-                If (hashtags <> "") Then hashtags = hashtags + ","
-                hashtags = hashtags + uh.text
-            Next
-            Range("Q" + CStr(dnum)) = hashtags
-
-            mentions = ""
-            For Each um In x.entities.user_mentions
-                If (mentions <> "") Then mentions = mentions + ","
-                mentions = mentions + um.screen_name
-            Next
-            Range("R" + CStr(dnum)) = mentions
-            
-            dnum = dnum + 1
-            max_id = x.id_str
-            If (stime <> CStr(x.created_at)) Then
-                scount = 0
-                stime = CStr(x.created_at)
-            Else
-                scount = scount + 1
-            End If
-            Application.StatusBar = CStr(dnum) + ":" + CStr(scount) + ":" + CStr(x.created_at)
-        End If
-        Range("A3") = dnum - 3
-        DoEvents
-    Next
-    
-    'sleepNow (2) ' If you don't want to use getAllSlowly, uncomment this, but unreliable
-Loop Until (json.statuses = "" Or max_id = last_id)
-
-CreateObjectx86 , True ' close mshta host window at the end
-MsgBox "Get All Done"
-End Sub
-'
-' getAllExtendedSlowly: Get All Tweets, but slowly to get around rate limit
-'               Run this ONLY AFTER AND IF getAll crashes
-'
-' Entry:  Twitter search string in A1
-'         Column B Must be Text
-'         Cursor positioned on last valid B-cell
-' Exit:   All the tweets, subject to Excel's max row
-'
-Sub getAllExtendedSlowly()
-Dim req As New XMLHTTP60 ' Don't forget Tools > References : Microsoft XML,v6.0
-Dim sc As ScriptControl
-Dim url As String
-Dim response As String
-Dim authorization_value As String
-Dim parameters As String
-Dim dnum As Long
-Dim dcell As String
-Dim last_id As String
-Dim max_id As String
-Dim x As Object
-Dim text As String ' hack to prevent vba from capitalizing text to Text
-Dim id As Long
-Dim count As Long
-Dim iname As Long
-Dim r As String
-Dim c As Long
-Dim json As Object
-Dim location 'hack to prevent vba from capitalizing location as Location
-Dim zed As Long
-Dim mentions, hashtags, medias As String
-Dim en, um, uh, uu As Variant
-Dim scount As Long
-Dim stime As String
-Dim rtname, fulltext As String
-'
-' Login if necesary
-'
-If Range("b2") = "" Then TwitterLogin
-bearer_token = Range("b2")
-authorization_value = "Bearer " + bearer_token ' assumes getTwitterToken called
-
-'
-' Create Script Control
-'
-Set sc = CreateObjectx86("MSScriptControl.ScriptControl")
-
-'
-' The Starting Cell of the Output
-'
-dnum = 4
-dcell = "B"
-
-'
-' Initialize the tweet max_id and the tweet count to zero
-'
-max_id = Selection
+dnum = ActiveCell.row
+If (dnum = 1) Then ' True if worksheet just created
+    max_id = "0"
+Else
+    max_id = Selection ' If destination row number != 1, then assume continuing
+End If
 dnum = ActiveCell.row + 1
 
+' Range("a3") = 0 ' No longer write out scrape # to cell
+
 '
 ' Main Loop
 '
@@ -687,10 +265,11 @@ Do
     ' Set up parameters, add tweet_mode=extended
     '
     last_id = max_id ' remember the very last tweet
+    parmbase = Worksheets("Input").Range("QueryString") + "&tweet_mode=extended" + "&count=100"
     If (max_id = "0") Then
-        parameters = Range("a1") + "&tweet_mode=extended" + "&count=100" ' 100 is the max tweets you can grab
+        parameters = parmbase ' 100 is the max tweets you can grab
     Else
-        parameters = Range("a1") + "&tweet_mode=extended" + "&count=100&" + "max_id=" + max_id
+        parameters = parmbase & "&max_id=" + max_id
     End If
     '
     ' Send the search request to twitter
@@ -708,7 +287,7 @@ Do
     ' Get the response object and put it into the json variable
     '
     response = req.responseText
-    ' Range("a2") = response ' debug to check resposnes
+    ' Worksheets("Input").Range("A7") = response ' debug to check resposnes
     sc.Language = "javascript"
     Set json = sc.Eval("(" + response + ")")
     '
@@ -716,34 +295,29 @@ Do
     '
     For Each x In json.statuses
         If (max_id <> x.id_str) Then
-            Range("B" + CStr(dnum)) = CStr(x.id_str)
-            Range("C" + CStr(dnum)) = x.created_at
-            Range("D" + CStr(dnum)) = x.user.screen_name
-            Range("E" + CStr(dnum)) = x.user.created_at
-            Range("F" + CStr(dnum)) = x.user.statuses_count
-            Range("G" + CStr(dnum)) = x.user.favourites_count
-            Range("H" + CStr(dnum)) = x.user.followers_count
-            Range("I" + CStr(dnum)) = x.user.friends_count
-            Range("J" + CStr(dnum)) = x.user.listed_count
-            Range("K" + CStr(dnum)) = x.favorite_count
-            Range("L" + CStr(dnum)) = x.retweet_count
-            Range("M" + CStr(dnum)) = x.user.verified
-
-            Range("N" + CStr(dnum)) = x.user.geo_enabled
-            'medias = ""
-            'For Each uu In x.extended_entities.media
-            '    If (medias <> "") Then medias = medias + ","
-            '    medias = medias + uu.media_url_https
-            'Next
-            'Range("N" + CStr(dnum)) = medias
-            
-            Range("O" + CStr(dnum)) = x.lang
-            
+            ws.Range("A" + CStr(dnum)) = x.user.description
+            ws.Range("B" + CStr(dnum)) = CStr(x.id_str)
+            ws.Range("C" + CStr(dnum)) = x.created_at
+            ws.Range("D" + CStr(dnum)) = x.user.screen_name
+            ws.Range("E" + CStr(dnum)) = x.user.created_at
+            ws.Range("F" + CStr(dnum)) = x.user.statuses_count
+            ws.Range("G" + CStr(dnum)) = x.user.favourites_count
+            ws.Range("H" + CStr(dnum)) = x.user.followers_count
+            ws.Range("I" + CStr(dnum)) = x.user.friends_count
+            ws.Range("J" + CStr(dnum)) = x.user.listed_count
+            ws.Range("K" + CStr(dnum)) = x.favorite_count
+            ws.Range("L" + CStr(dnum)) = x.retweet_count
+            ws.Range("M" + CStr(dnum)) = x.user.verified
+            ws.Range("N" + CStr(dnum)) = x.user.geo_enabled
+            ws.Range("O" + CStr(dnum)) = x.lang
+            '
+            ' Recreate the extended text
+            '
             If (isRT(x) = False) Then
                 If (InStr(x.full_text, "=") <> 1) Then
-                    Range("P" + CStr(dnum)) = x.full_text
+                    ws.Range("P" + CStr(dnum)) = x.full_text
                 Else
-                    Range("P" + CStr(dnum)) = "!" + x.full_text
+                    ws.Range("P" + CStr(dnum)) = "!" + x.full_text
                 End If
             Else
                 fulltext = x.full_text
@@ -751,9 +325,9 @@ Do
                 rtname = regexReplace(fulltext, "(^RT [^ ]+).*$", "$1")
                                 
                 If (InStr(x.retweeted_status.full_text, "=") <> 1) Then
-                    Range("P" + CStr(dnum)) = rtname + " " + x.retweeted_status.full_text
+                    ws.Range("P" + CStr(dnum)) = rtname + " " + x.retweeted_status.full_text
                 Else
-                    Range("P" + CStr(dnum)) = "! " + rtname + " " + x.retweeted_status.full_text
+                    ws.Range("P" + CStr(dnum)) = "! " + rtname + " " + x.retweeted_status.full_text
                 End If
             End If
             
@@ -762,14 +336,14 @@ Do
                 If (hashtags <> "") Then hashtags = hashtags + ","
                 hashtags = hashtags + uh.text
             Next
-            Range("Q" + CStr(dnum)) = hashtags
+            ws.Range("Q" + CStr(dnum)) = hashtags
 
             mentions = ""
             For Each um In x.entities.user_mentions
                 If (mentions <> "") Then mentions = mentions + ","
                 mentions = mentions + um.screen_name
             Next
-            Range("R" + CStr(dnum)) = mentions
+            ws.Range("R" + CStr(dnum)) = mentions
             
             dnum = dnum + 1
             max_id = x.id_str
@@ -781,15 +355,16 @@ Do
             End If
             Application.StatusBar = CStr(dnum) + ":" + CStr(scount) + ":" + CStr(x.created_at)
         End If
-        Range("A3") = dnum - 3
+        ' Range("A3") = dnum - 3
         DoEvents
     Next
     
-    sleepNow (2) ' If you don't want to use getAllExtendedSlowly, uncomment this, but unreliable
+    If (delay <> 0) Then sleepNow (delay) ' If you don't want to use getAllSlowly, uncomment this, but unreliable
 Loop Until (json.statuses = "" Or max_id = last_id)
 
 CreateObjectx86 , True ' close mshta host window at the end
-MsgBox "Get All Done"
+Application.StatusBar = "DONE: " + CStr(dnum - 2) + " TOTAL TWEETS SCRAPED"
+'MsgBox "Get All Done"
 End Sub
 '
 ' getFriendStatus: Check the friendship status of the 100 OR LESS usernames highlighted
